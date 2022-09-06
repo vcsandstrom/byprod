@@ -1,4 +1,4 @@
-# Gather data together to analyze the replacement potential at REGIONAL LEVEL
+# Gather data together to analyze the replacement potential at regional level
 
 # set working directory the path that this script is located in
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -7,12 +7,12 @@ library(janitor)
 
 years= c(2016,2017,2018)
 # Read in feed use
-source("fish_feed_updated.R") # unit: tonnes
+source("fish_feed.R") # unit: tonnes
 ffeed = fish_feed(years)
-#ffeed = read.csv("outputs/fish_feed_updated.csv", check.names = F)
-source("livestock_feed_updated.R") # Unit: tonnes
+#ffeed = read.csv("outputs/fish_feed.csv", check.names = F)
+source("livestock_feed.R") # Unit: tonnes
 lfeed = livestock_feed(years)
-source("Byproducts_updated.R")
+source("Byproducts.R")
 # You can either run the functions for the amounts of byproducts produced, or
 # read in the files saved running the byproducts.R code previously for 2016-2018
 
@@ -396,6 +396,14 @@ rep_cer_tot$increased_fat_median = rep_cer_tot$repl_median*rep_cer_tot$fat_g_t
 rep_cer_tot$increased_fat_5th = rep_cer_tot$repl_5th*rep_cer_tot$fat_g_t
 rep_cer_tot$increased_fat_95th = rep_cer_tot$repl_95th*rep_cer_tot$fat_g_t
 
+# Check how much alt feed from the total rep
+rep_alt_feed = rep_cer %>%
+  group_by(alt_feed)%>%
+  summarise(across(where(is.numeric), .fns = sum, na.rm=T))%>%
+  mutate(rep_alt_feed_median =rowMedians(as.matrix(rep_alt_feed[,c(2:501)]),na.rm=TRUE))%>%
+  select(!c(2:501))
+rep_alt_feed$share_rep = rep_alt_feed$repl_median/sum(rowMedians(as.matrix(feed_cereals[,c(4:503)]),na.rm=TRUE))
+sum(rep_alt_feed$share_rep) # ~10% can be replaced
 
 ##### 1b) CEREALS with crop residues ######
 
@@ -489,21 +497,42 @@ rep_cer_tot2$repl_95th<-apply(as.matrix(rep_cer_tot2[,c(3:502)]),MARGIN=1, funct
 # Calculate the reduced productivity for the amounts of cattle production for which the replacement with crop residues would occur
 
 # Calculate the share of replacement with crop residues from the total cereal feed use for cattle meat and dairy
-cattle_meat_cropres = matrix(NA, 500,1)
+cattle_meat_cropres = matrix(NA, 500,2)
 for(i in 5:504){
   cattle_meat_cropres[i-4,1] = sum(rep_cer6[which(rep_cer6$Item == "Meat, cattle"),i])/
     sum(feed_cereals[which(feed_cereals$Item == "Meat, cattle"),i-1])
 }
-cattle_meat_cropres_share=mean(cattle_meat_cropres,na.rm=T)
-quantile(cattle_meat_cropres, probs = c(.05, .95))
 
-cattle_dairy_cropres = matrix(NA, 500,1)
+for(i in 6:505){
+  cattle_meat_cropres[i-5,2] = sum(feed_cereals[which(feed_cereals$Item == "Meat, cattle"),i-2])/
+    sum(lfeed[which(lfeed$Item=="Meat, cattle"),i])
+}
+cattle_meat_cropres =as.data.frame(cattle_meat_cropres)
+
+cattle_meat_cropres$crop_res_of_tot_feed = cattle_meat_cropres$V1*cattle_meat_cropres$V2 
+
+cattle_meat_cropres_share=mean(cattle_meat_cropres$crop_res_of_tot_feed,na.rm=T) # This is the % of total cattle meat feed replaced with crop res
+cattle_meat_cropres_share_95th =as.numeric(quantile(cattle_meat_cropres$crop_res_of_tot_feed, probs = c(.95)))
+cattle_meat_cropres_share_5th =as.numeric(quantile(cattle_meat_cropres$crop_res_of_tot_feed, probs = c(.05)))
+
+
+cattle_dairy_cropres = matrix(NA, 500,2)
 for(i in 5:504){
   cattle_dairy_cropres[i-4,1] = sum(rep_cer6[which(rep_cer6$Item == "Milk, whole fresh cow"),i])/
     sum(feed_cereals[which(feed_cereals$Item == "Milk, whole fresh cow"),i-1])
 }
-dairy_cropres_share= mean(cattle_dairy_cropres,na.rm=T)
-quantile(cattle_dairy_cropres, probs = c(.05, .95))
+for(i in 6:505){
+  cattle_dairy_cropres[i-5,2] = sum(feed_cereals[which(feed_cereals$Item == "Milk, whole fresh cow"),i-2])/
+    sum(lfeed[which(lfeed$Item=="Milk, whole fresh cow"),i])
+}
+cattle_dairy_cropres =as.data.frame(cattle_dairy_cropres)
+
+cattle_dairy_cropres$crop_res_of_tot_feed = cattle_dairy_cropres$V1*cattle_dairy_cropres$V2 
+
+dairy_cropres_share= mean(cattle_dairy_cropres$crop_res_of_tot_feed,na.rm=T)
+dairy_cropres_share_95th =quantile(cattle_dairy_cropres$crop_res_of_tot_feed, probs = c(.95))
+dairy_cropres_share_5th =quantile(cattle_dairy_cropres$crop_res_of_tot_feed, probs = c(.05))
+
 
 
 # For these % of the cattle meat and dairy production there would be 40-80% production decrease
@@ -530,9 +559,10 @@ FAO_animprod = merge(x=FAO_animprod, y=countries[,c(2,12,13,14,15)], by="Area Co
 FAO_animprod = aggregate(data=FAO_animprod, mean~ Item+ RegionName, FUN=sum)
 FAO_animprod = FAO_animprod[FAO_animprod$Item %in% c("Milk, whole fresh cow", "Meat, cattle"),]
 
-# Calculate for the replaced the cattle meat and dairy production there would be 40-80% production decrease
-FAO_animprod$redu_prod_min = ifelse(FAO_animprod$Item == "Milk, whole fresh cow", dairy_cropres_share*FAO_animprod$mean*0.40,cattle_meat_cropres_share*FAO_animprod$mean*0.40)
-FAO_animprod$redu_prod_max = ifelse(FAO_animprod$Item == "Milk, whole fresh cow", dairy_cropres_share*FAO_animprod$mean*0.80,cattle_meat_cropres_share*FAO_animprod$mean*0.80)
+# Calculate for the share of total feed how much crop res is replacing cereals
+# and assume that for this share of the cattle meat and dairy production there would be 40-80% production decrease
+FAO_animprod$redu_prod_min = ifelse(FAO_animprod$Item == "Milk, whole fresh cow", dairy_cropres_share_5th*FAO_animprod$mean*0.40,cattle_meat_cropres_share_5th*FAO_animprod$mean*0.40)
+FAO_animprod$redu_prod_max = ifelse(FAO_animprod$Item == "Milk, whole fresh cow", dairy_cropres_share_95th*FAO_animprod$mean*0.80,cattle_meat_cropres_share_95th*FAO_animprod$mean*0.80)
 
 # Convert to macronutrients
 FAO_animprod$feed_material = "cereals"
@@ -1495,6 +1525,8 @@ rep_pulses_tot$increased_fat_95th = rep_pulses_tot$repl_95th*rep_pulses_tot$fat_
 
 # Combine to a summary table the replacement potentials
 
+# Show in the summary table the feed use, replacement potential, increased food supply
+
 # 1) cereals
 sum_table_cereals = Total_feed_cereals[,c(1,502:504)]
 sum_table_cereals = cbind(sum_table_cereals, rep_cer_tot[,c(503:505, 509:517)]) 
@@ -1549,5 +1581,24 @@ sum_table$perc_repl = sum_table$repl_median/sum_table$feed_use_median
 sum_table$perc_repl_5th = sum_table$repl_5th/sum_table$feed_use_5th
 sum_table$perc_repl_95th = sum_table$repl_95th/sum_table$feed_use_95th
 
+# Add columns about how much the increased food supply is from current use
+# Global food supply
+# Total pop (average 2016-2018) : 7365063000
+total_pop =7365063000
+losses = 1.084  # 8.4% from Kummu et al. (2012) for the supply chain losses without production and consumption
+# Global food supply = 2918.7 kcal/cap/day
+kcal_glob = (2918.7 * 365 * total_pop *losses)/10^12
+# Global protein supply = 82.5 g/cap/day
+prot_glob = (82.5 * 365 * total_pop *losses)/10^12
+# Global fat supply (85.2 g/cap/year
+fat_glob = (85.2 * 365 * total_pop *losses)/10^12
 
-#####
+sum_table$kcal_perc_use_median = (sum_table$increased_kcal_median/10^12)/kcal_glob
+sum_table$kcal_perc_use_5th = (sum_table$increased_kcal_5th/10^12)/kcal_glob
+sum_table$kcal_perc_use_95th = (sum_table$increased_kcal_95th/10^12)/kcal_glob
+sum_table$prot_perc_use_median = (sum_table$increased_prot_median/10^12)/prot_glob
+sum_table$prot_perc_use_5th = (sum_table$increased_prot_5th/10^12)/prot_glob
+sum_table$prot_perc_use_95th = (sum_table$increased_prot_95th/10^12)/prot_glob
+sum_table$fat_perc_use_median = (sum_table$increased_fat_median/10^12)/fat_glob
+sum_table$fat_perc_use_5th = (sum_table$increased_fat_5th/10^12)/fat_glob
+sum_table$fat_perc_use_95th = (sum_table$increased_fat_95th/10^12)/fat_glob
