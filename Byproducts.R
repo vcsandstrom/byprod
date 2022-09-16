@@ -262,7 +262,7 @@ anim_bp_meat = spread(anim_bp_meat, Element, mean)
 dressing_perc = read.csv("data/DressingPerc.csv", sep=",", check.names = F) 
 anim_bp_meat = merge(anim_bp_meat, dressing_perc[,c(1,3)], by="Item Code")
 anim_bp_meat$live_weight = anim_bp_meat$Production/anim_bp_meat$dress_perc
-# Multiply the live weight with the ratios of different rendering products with the numbers from van Hal et al.2020
+# Multiply the live weight with the ratios of different rendering products
 byprod = read.csv("data/livestock_byproducts.csv", check.names = F) # 
 anim_bp_meat= merge(x= anim_bp_meat, y= byprod[,c(1,3,4)], by="Item Code")
 anim_bp_meat$bp_amount = anim_bp_meat$live_weight* anim_bp_meat$ratio_rend_prod

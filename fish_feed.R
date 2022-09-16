@@ -83,7 +83,7 @@ fish_feed <- function(x) {
   ### Estimating a 100% inclusion of all ingredients for the average composition
   ### based on amount of each ingredient with optimization algorithm
   
-  ##### second option if optimization issue not resolved --using proportions to sum to 100 the diet
+  #####using proportions to sum to 100 the diet
   cells<-which(Feed$Range== "Average")
   cells_min<-which(Feed$Range== "Min")
   cells_max<-which(Feed$Range== "Max")

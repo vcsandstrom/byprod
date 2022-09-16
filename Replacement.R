@@ -9,7 +9,6 @@ years= c(2016,2017,2018)
 # Read in feed use
 source("fish_feed.R") # unit: tonnes
 ffeed = fish_feed(years)
-#ffeed = read.csv("outputs/fish_feed.csv", check.names = F)
 source("livestock_feed.R") # Unit: tonnes
 lfeed = livestock_feed(years)
 source("Byproducts.R")
@@ -83,14 +82,10 @@ Total_feed_cereals$feed_use_5th<-apply(as.matrix(Total_feed_cereals[,c(2:501)]),
 Total_feed_cereals$feed_use_95th<-apply(as.matrix(Total_feed_cereals[,c(2:501)]),MARGIN=1, function(x)quantile(x,0.95,na.rm=TRUE))
 
 # Combine production of byprods
-# Read in data calculated in separate R.files
-#crop_res = crop_res(years)
-crop_res = read.csv("outputs/crop_res_results_2016_2018.csv", check.names =F )
+crop_res = crop_res(years)
 crop_res$feed_material = "crop_res"
-#crop_byprods= crop_byprod(years)
-crop_byprods= read.csv("outputs/crop_byprod_results_2016_2018_updated.csv", check.names =F )
-#anim_bps = anim_bp(years)
-anim_bps= read.csv("outputs/anim_bp_2016_2018.csv", check.names = F)
+crop_byprods= crop_byprod(years)
+anim_bps = anim_bp(years)
 colnames(anim_bps)[1]="feed_material"
 
 byprods = rbind(crop_res, anim_bps[,-504])
@@ -217,7 +212,7 @@ for (i in 1:500){
 }
 
 
-# Wet distilleries grains
+# distilleries grains
 
 distillers_grains_glob = sum(crop_byprods[crop_byprods$feed_material=="distillers_grains","byprod_value"])
 # Their use as feed
@@ -242,7 +237,6 @@ for (i in 1:500){
 # Cereals Feed use
 # Select only food crop cereals
 #Total_feed_cereals
-
 
 ### Select separately cereals used in livestock feed and in fish feed
 
@@ -533,10 +527,7 @@ dairy_cropres_share= mean(cattle_dairy_cropres$crop_res_of_tot_feed,na.rm=T)
 dairy_cropres_share_95th =quantile(cattle_dairy_cropres$crop_res_of_tot_feed, probs = c(.95))
 dairy_cropres_share_5th =quantile(cattle_dairy_cropres$crop_res_of_tot_feed, probs = c(.05))
 
-
-
 # For these % of the cattle meat and dairy production there would be 40-80% production decrease
-
 
 # Read in data on different livestock production quantities 
 # import data on the crop production and the residue production rates
@@ -654,7 +645,6 @@ fm_use_items = fm_use
 # Calculate first how much animal bps are available and reduce the amount currently used as feed
 
 # Read in the potential replacements for fm
-# c("blood_meal_poultry","blood_meal_pig", "hydrolyzed_feather_meal", "meat_meal", "poultry_byproduct_meal")
 # Separate different animal byproducts to their own groups
 
 # blood meal poultry

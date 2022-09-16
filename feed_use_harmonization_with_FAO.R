@@ -12,7 +12,6 @@ years = c(2016,2017,2018) # Choose the mean of which three years you want to ass
 # Read in feed use as-fed basis
 source("fish_feed.R") # unit: tonnes
 fish_feed = fish_feed(years)
-#fish_feed = read.csv("outputs/fish_feed_updated.csv", check.names = F) # Read in the saved outputs for time saving
 source("livestock_feed.R") # Unit: tonnes
 livestock_feed = livestock_feed(years)
 source("Byproducts.R")
